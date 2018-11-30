@@ -1,0 +1,17 @@
+https://github.com/zeerakw/hatespeech
+
+Wikipedia hate comments see files 
+https://figshare.com/articles/Wikipedia_Detox_Data/4054689
+
+
+twitter-hate-speech-classifier-DFE-a845520.csv from
+https://data.world/crowdflower/hate-speech-identification
+
+
+
+
+
+https://github.com/GreenParachute/hate-speech-popularity
+
+italian
+http://hatespeech.di.unito.it/resources.html
