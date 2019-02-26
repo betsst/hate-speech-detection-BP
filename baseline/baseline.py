@@ -1,81 +1,53 @@
 import torch
 import torch.nn as nn
 from sklearn.model_selection import train_test_split
-from thinc.neural._classes import softmax
-from torch.autograd import Variable
 import numpy as np
-import matplotlib.pyplot as plt
-from torchtext import data
-import pandas as pd
+from tqdm import tqdm
+from sklearn.metrics import f1_score
 
-from davidson_data import get_y_values, classes_summmary
+from baselineModel import BaselineModel
+from davidson_data import classes_summary, get_y_values
 
-batch_size = 20
+
+random_seed = 42
+reduce = {'do_reducing': True, 'reduce_to': 10}   # for debugging
+save_model = True
+model_testing = True
+
+device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+
+test_size = 0.2
+batch_size = 3
+learning_rate = 0.003
 classes = 3
-class_weights = torch.Tensor(classes_summmary()).float()
+weighted_classes = True
+if weighted_classes:
+    class_weights = torch.Tensor(classes_summary(reduce['do_reducing'], reduce['reduce_to'])).float()
+    class_weights = class_weights.to(device)
+else:
+    class_weights = torch.as_tensor([1, 1, 1], device=device).float()
 
-with open("..\\..\\data\\x_vals.csv", "r") as ins:
-    x_vals = []
-    ids = []
-    for i, line in enumerate(ins, 0):
-        x_vals.append([float(x) for x in line.split(',')])
-        ids.append(i)
+# data loading
+x_vals = []
+with open('data\\features_1gram.csv') as f:
+    for (idx, line) in enumerate(f, 1):
+        if (idx % 1000) == 0:
+            print('On line ' + str(idx))
+        item = [float(x) for x in line.split(',')]
+        x_vals.append(item)
+        if reduce['do_reducing'] and idx == reduce['reduce_to']:
+            break
+    print('Dataset loaded.')
 
-max_length = len(max(x_vals, key=len))
+y_vals = get_y_values(reduce['do_reducing'], reduce['reduce_to'])
+x_train, x_test, y_train, y_test = train_test_split(x_vals, y_vals, test_size=test_size, random_state=random_seed)
+features_count = len(x_train[0])
 
-# df = pd.read_table('..\\..\\data\\x_vals.csv', sep=',', header=None, error_bad_lines=False)
-# df.fillna(0, inplace=True)
-# print(df)
-# my_data = genfromtxt('..\\..\\data\\x_vals.csv', delimiter=',', filling_values=0)
-# df = dask.dataframe.read_csv("..\\..\\data\\x_vals.csv", encoding = "UTF-8")
-# x_vals = []
-# with open('..\\..\\data\\x_vals.csv') as csvfile:
-#     readCSV = csv.reader(csvfile, delimiter=',')
-#     for row in readCSV:
-#         x_vals.append(row)
-#         print(row)
-
-
-# x_vals = torch.Tensor(df.values)
-# X_train, X_test, y_train, y_test = train_test_split(x_vals, y_vals, test_size=0.33, random_state=42)
-# # x_train_np = np.asarray(X_train,dtype=np.float32)
-# # x_train_np = np.asarray(X_train,dtype=np.float32).reshape(-1,2)
-# x_train = torch.Tensor(x_vals)
-
-y_vals = get_y_values()
-y_train_np = np.asarray(y_vals, dtype=np.float32).reshape(-1,3)
-y_train = torch.from_numpy(y_train_np)
-
-# alpha = np.random.rand(1)
-# beta = np.random.rand(1)
-
-class BaselineModel(torch.nn.Module):
-    def __init__(self, input_size, output_size):
-        super(BaselineModel, self).__init__()
-        # simple linear layer
-        self.linear = torch.nn.Linear(input_size, out_features=output_size)
-        self.softmax = nn.Softmax(dim=1)
-
-    def num_features(self):
-        return 1180
-
-    def forward(self, x):
-        # normalization
-        x_mean = torch.mean(x, dim=1).view(-1, 1)
-        x_std = torch.std(x, dim=1).view(-1, 1)
-        x_normalized = (x - x_mean) / x_std
-        output = self.linear(x_normalized)
-        output = self.softmax(output)
-        return output
-
-# linear_reg_model = BaselineModel(len(x_vals[0]), 1)
-# TODO  what value should be set if it varies
-linear_reg_model = BaselineModel(max_length, classes)
-
+log_reg_model = BaselineModel(features_count, classes).to(device)
 criterion = nn.CrossEntropyLoss(weight=class_weights)
-learning_rate = 0.1
 # optimiser = torch.optim.SGD(linear_reg_model.parameters(), lr = learning_rate)
-optimiser = torch.optim.Adam(linear_reg_model.parameters(), lr = learning_rate)
+optimiser = torch.optim.Adam(log_reg_model.parameters(), lr=learning_rate)
+
 
 def set_index_target(hot_one_encoding):
     target_list = []
@@ -90,56 +62,58 @@ def set_index_target(hot_one_encoding):
         # target_list.append(np.nonzero(l)[0])
     return target_list
 
-def pad(seq, target_length, padding=0):
-    for i, s in enumerate(seq, 0):
-        if len(s) < target_length:
-            seq[i].extend([padding] * (target_length - len(s)))
-    return seq
 
-# training
-epochs = 500
-linear_reg_model.train()
-for epoch in range(epochs):
-    batch_ids = np.random.choice(ids, batch_size)
-    batch_data = [x_vals[i] for i in batch_ids]
-    batch_labels = [y_vals[i] for i in batch_ids]
-    seq_lengths = [len(b) for b in batch_data]
-    batch_data = pad(batch_data, max(seq_lengths))
-    batch_data = torch.Tensor(batch_data)
+# model training
+epochs = 10
+avg_loss = 0
+batches_done = 0
+y_true = []
+y_predictions = []
 
-    inputs = Variable(batch_data)
-    labels = Variable(y_train)
-    target = torch.Tensor(set_index_target(batch_labels)).long()
+log_reg_model.train()
+for e in range(epochs):
+    pbar = tqdm(total=len(range(len(x_train) // batch_size)))
+    # TODO add different batches because now are always same
+    for step, epoch in enumerate(range(len(x_train) // batch_size)):
+        # batch_ids = np.random.choice(ids, batch_size)
+        batch_data = x_train[batch_size * step:(step + 1) * batch_size]
+        batch_labels = y_train[batch_size * step:(step + 1) * batch_size]
+        inputs = torch.Tensor(batch_data).to(device)
+        target = torch.Tensor(set_index_target(batch_labels)).long().to(device)
 
-    optimiser.zero_grad()
-    outputs = linear_reg_model.forward(inputs.float())
-    for o in outputs:
-        print(o)
-    loss = criterion(outputs, target)
-    # loss = criterion(outputs.long(), labels.long())
-    print("Loss data ", loss.item())
-    loss.backward()
-    optimiser.step() # update
+        optimiser.zero_grad()
+        outputs = log_reg_model.forward(inputs.float())
+
+        loss = criterion(outputs, target)
+        batches_done += 1
+        avg_loss += loss.item()
+
+        pbar.set_description(f"Loss data {avg_loss / batches_done}")
+        pbar.update(1)
+
+        y_test_batch = [np.argmax(t) for t in batch_labels]
+        y_predict_batch = [np.argmax(t) for t in outputs.cpu().detach().numpy()]
+        # print(f'F1Score for batch: {f1_score(y_test_batch, y_predict_batch, average="macro")}')
+
+        y_true = y_true + y_test_batch
+        y_predictions = y_predictions + y_predict_batch
+        print(f'F1Score so far: {f1_score(y_true, y_predictions, average="macro")}')
+
+        loss.backward()
+        optimiser.step()  # update
 
 
-# predicted = linear_reg_model(Variable(x_train)).data.numpy()
-# plt.plot(x_train_np, y_train_np, 'ro', label='Original Data')
-# plt.plot(x_train_np, predicted, label='Fitted Line')
-# plt.legend()
-# plt.show()
+# model testing
+if model_testing:
+    log_reg_model.eval()
+    test_true = [np.argmax(t) for t in y_test]
+    test_pred = []
+    for x, label in zip(x_test, y_test):
+        input = torch.Tensor([x]).to(device)
+        out = log_reg_model(input.float())
+        test_pred.append(np.argmax(outputs.cpu().detach().numpy()))
+    print(f'Model has F1Score: {f1_score(y_true, y_predictions, average="macro")}')
 
-# testing
-
-# exp = torch.Tensor([25.0])
-# print("Length of sentence is: 25\n Class is:", linear_reg_model(exp).data[0][0].item())
-# correct = 0
-# total = 0
-# for images, labels in test_loader:
-#     images = Variable(images.view(-1, 28 * 28))
-#     outputs = model(images)
-#     _, predicted = torch.max(outputs.data, 1)
-#     total += labels.size(0)
-#     correct += (predicted == labels).sum()
-#
-# print('Accuracy of the model: %d %%' % (100 * correct / total))
-
+# save model
+if save_model:
+    torch.save(log_reg_model.state_dict(), 'baselineModelTrained.pt')
