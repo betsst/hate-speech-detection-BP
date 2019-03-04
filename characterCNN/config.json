@@ -16,7 +16,7 @@
   "model": {
     "num_classes": 3,
     "l0": 1014,
-    "batch_size": 12,
+    "batch_size": 128,
     "dropout": 0.5,
     "feature_size": "small",
     "train": {

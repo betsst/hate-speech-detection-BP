@@ -16,7 +16,6 @@ from characterCNN.CharCNNModel import CharCNNModel
 
 def train(model, criterion, optimiser, train_iterator):
     model.train()
-    predictions = model(None)
 
     train_loss = 0
     total_correct = 0
@@ -46,6 +45,7 @@ def train(model, criterion, optimiser, train_iterator):
             # Backward and optimize
             optimiser.zero_grad()
             loss.backward()
+            # TODO learning scheduler https://pytorch.org/docs/0.3.0/optim.html#how-to-adjust-learning-rate or determing step size
             optimiser.step()
             pbar.update(1)
 
