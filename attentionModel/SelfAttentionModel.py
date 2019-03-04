@@ -40,7 +40,6 @@ class SelfAttentionModel(nn.Module):
         return out_a
 
     def forward(self, w):
-        self.input_shape = w.shape
         out = self.embeddings(w)
         # bidirectional pass of LSTM - H
         out_lstm, _ = self.bilstm(out)

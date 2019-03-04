@@ -25,7 +25,7 @@ LABELS.build_vocab(tabular_dataset)
 
 selfAttModel = SelfAttentionModel(vocabulary=TEXT.vocab).to(device)
 criterion = nn.CrossEntropyLoss()
-optimizer = torch.optim.Adam(selfAttModel.parameters(), lr=learning_rate)
+optimiser = torch.optim.Adam(selfAttModel.parameters(), lr=learning_rate)
 
 train_loss = 0
 total_correct = 0
@@ -54,9 +54,9 @@ for epoch in range(num_epochs):
             f'F1: {f1_score(true_labels, model_predictions, average="macro")}')
 
         # Backward and optimize
-        optimizer.zero_grad()
+        optimiser.zero_grad()
         loss.backward()
-        optimizer.step()
+        optimiser.step()
         pbar.update(1)
 
 # eval
