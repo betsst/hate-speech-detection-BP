@@ -1,23 +1,21 @@
 {
   "data_processing": {
-    "data_files": [
-      "../data/davidson.csv"
-    ],
+    "dataset_file": "../data/davidson.tsv",
     "data_column": "tweet",
     "differ_uppercase": false,
     "alphabet": [
       "a", "b", "c", "d", "e", "f", "g", "h", "i", "j", "k", "l", "m", "n", "o", "p", "q", "r", "s", "t", "u", "v", "w",
       "x", "y", "z", "0", "1", "2", "3", "4", "5", "6", "7", "8", "9", "-", ",", ";", ".", "!", "?", ":", "'",
-      "\"", "/", "\\", "|", "_", "@", "#", "$", "%", "^", "&", "*", "~", "`", "+", "-", "=", "<", ">", "(", ")", "[",
+      "\"", "/", "\\", "|", "_", "@", "#", "$", "%", "^", "&", "*", "~", "`", "+", "=", "<", ">", "(", ")", "[",
       "]", "{", "}", "\n"
-    ],
-    "context_length": 1014
+    ]
   },
   "model": {
     "num_classes": 3,
     "l0": 1014,
     "batch_size": 128,
     "dropout": 0.5,
+    "balanced_weights": true,
     "feature_size": "small",
     "train": {
       "num_epochs": 3,

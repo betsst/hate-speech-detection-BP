@@ -9,7 +9,6 @@ with open('config.json', 'r') as f:
 
 
 class CharCNNModel(nn.Module):
-    # Our batch shape for input x is (batch_size, 70, 1024)
     def __init__(self, l0=config_model['l0'], batch_size=config_model['batch_size']):
         super(CharCNNModel, self).__init__()
         self.l0 = l0
@@ -78,9 +77,11 @@ class CharCNNModel(nn.Module):
         return ((self.l0 - 96) // 27) * self.conv_feature
 
     def forward(self, x):
-        x = torch.randn(self.batch_size, len(config['data_processing']['alphabet']), self.l0)
+        # batch shape for model input x should be (batch_size, 70, 1014)
+        # x = torch.randn(self.batch_size, len(config['data_processing']['alphabet']), self.l0) # for debug
+        xt = x.transpose(1, 2)
 
-        out = self.conv1(x)
+        out = self.conv1(xt)
         print('shape after CONV1 ' + str(out.shape))
         out = self.conv2(out)
         print('shape after CONV2 ' + str(out.shape))

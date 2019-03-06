@@ -1,4 +1,4 @@
-import  csv
+import csv
 import json
 
 import numpy as np
@@ -12,6 +12,8 @@ from torchtext.vocab import GloVe
 from tqdm import tqdm
 
 from characterCNN.CharCNNModel import CharCNNModel
+from characterCNN.CharField import CharField
+from characterCNN.ChatCnnDataset import CharCnnDataset
 
 
 def train(model, criterion, optimiser, train_iterator):
@@ -24,9 +26,9 @@ def train(model, criterion, optimiser, train_iterator):
     model_predictions = []
     true_labels = []
 
-    for epoch in range(config['model']['train']['num_epochs']):
+    for epoch in range(config_train['num_epochs']):
         for i, batch in enumerate(train_iterator):
-            predictions = model(batch.features)  # forward pass
+            predictions = model(batch.text)  # forward pass
 
             loss = criterion(predictions, batch.labels)
             train_loss += loss.item()
@@ -57,15 +59,44 @@ def eval(model, eval_iterator):
 if __name__ == '__main__':
     with open('config.json', 'r') as f:
         config = json.load(f)
+        config_data = config['data_processing']
+        config_model = config['model']
+        config_train = config['model']['train']
 
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
+    TEXT = torchdata.Field(tokenize=lambda x: list(x), fix_length=config_model['l0'],
+                           lower=not config_data['differ_uppercase'])
+    CHARS = CharField(fix_length=config_model['l0'], lower=not config_data['differ_uppercase'])
+    LABELS = torchdata.Field(use_vocab=False, sequential=False, preprocessing=lambda x: int(x), is_target=True)
+
+    # tabular_dataset = torchdata.TabularDataset(config_data['dataset_file'], format='tsv', fields=[('labels', LABELS),
+    #                                                                                               ('text', TEXT)])
+    charcnn_dataset = CharCnnDataset(path=config_data['dataset_file'], format='tsv',
+                                     fields=[('labels', LABELS), ('text', CHARS)])
+
+    # for e in charcnn_dataset.examples:
+    #     print(e.text)
+    #     one_hot_encoding(e.text)
+
+    train_iterator = torchdata.Iterator(charcnn_dataset, batch_size=config_model['batch_size'], device=device)
+
+    num_classes, weights = charcnn_dataset.get_class_weight()
+    if config_model['balanced_weights']:
+        weights = [1.0] * num_classes
+
+    TEXT.build_vocab(config_data['alphabet'])
+    LABELS.build_vocab(charcnn_dataset)
+
+    # TEXT.build_vocab(train_ccn_iterator)
+    # LABELS.build_vocab(train_ccn_iterator)
+
     charCNNModel = CharCNNModel().to(device)
-    criterion = nn.CrossEntropyLoss()
-    optimiser = torch.optim.SGD(charCNNModel.parameters(), lr=config['model']['train']['learning_rate'], momentum=0.9)
+    criterion = nn.CrossEntropyLoss(weight=torch.as_tensor(weights, device=device).float())
+    optimiser = torch.optim.SGD(charCNNModel.parameters(), lr=config_model['train']['learning_rate'], momentum=0.9)
     # optimiser = torch.optim.Adam(charCNNModel.parameters(), lr=config['learning_rate'])
 
-    train(charCNNModel, criterion, optimiser, [])
+    train(charCNNModel, criterion, optimiser, train_iterator)
     eval(charCNNModel, [])
 
     # save model
