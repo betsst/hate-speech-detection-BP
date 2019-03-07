@@ -37,7 +37,7 @@ class CharField(torchdata.Field):
                 elem_matix.append(v)
             var.append(elem_matix)
 
-        var = torch.tensor(var, dtype=self.dtype, device=device)
+        var = torch.tensor(var, dtype=self.dtype, device=device).float()
 
         if self.sequential:
             var = var.contiguous()

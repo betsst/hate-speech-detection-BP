@@ -1,14 +1,11 @@
-import csv
 import json
 
 import numpy as np
-from numba.tests.test_parallel_backend import linalg_runner
 from sklearn.metrics import f1_score
 import torch
 import torch.nn as nn
 import torch.optim
 from torchtext import data as torchdata
-from torchtext.vocab import GloVe
 from tqdm import tqdm
 
 from characterCNN.CharCNNModel import CharCNNModel
@@ -70,14 +67,8 @@ if __name__ == '__main__':
     CHARS = CharField(fix_length=config_model['l0'], lower=not config_data['differ_uppercase'])
     LABELS = torchdata.Field(use_vocab=False, sequential=False, preprocessing=lambda x: int(x), is_target=True)
 
-    # tabular_dataset = torchdata.TabularDataset(config_data['dataset_file'], format='tsv', fields=[('labels', LABELS),
-    #                                                                                               ('text', TEXT)])
     charcnn_dataset = CharCnnDataset(path=config_data['dataset_file'], format='tsv',
                                      fields=[('labels', LABELS), ('text', CHARS)])
-
-    # for e in charcnn_dataset.examples:
-    #     print(e.text)
-    #     one_hot_encoding(e.text)
 
     train_iterator = torchdata.Iterator(charcnn_dataset, batch_size=config_model['batch_size'], device=device)
 
@@ -87,9 +78,6 @@ if __name__ == '__main__':
 
     TEXT.build_vocab(config_data['alphabet'])
     LABELS.build_vocab(charcnn_dataset)
-
-    # TEXT.build_vocab(train_ccn_iterator)
-    # LABELS.build_vocab(train_ccn_iterator)
 
     charCNNModel = CharCNNModel().to(device)
     criterion = nn.CrossEntropyLoss(weight=torch.as_tensor(weights, device=device).float())
