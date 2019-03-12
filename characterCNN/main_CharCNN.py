@@ -9,44 +9,48 @@ from torchtext import data as torchdata
 from tqdm import tqdm
 
 from characterCNN.CharCNNModel import CharCNNModel
+from characterCNN.CharCnnDataset import CharCnnDataset
 from characterCNN.CharField import CharField
-from characterCNN.ChatCnnDataset import CharCnnDataset
 
 
 def train(model, criterion, optimiser, train_iterator):
     model.train()
 
-    train_loss = 0
     total_correct = 0
     total_batches = len(train_iterator.data()) // train_iterator.batch_size
-    pbar = tqdm(total=total_batches)
     model_predictions = []
     true_labels = []
 
     for epoch in range(config_train['num_epochs']):
+        pbar = tqdm(total=total_batches)
+        train_loss = 0
         for i, batch in enumerate(train_iterator):
             predictions = model(batch.text)  # forward pass
 
             loss = criterion(predictions, batch.labels)
             train_loss += loss.item()
 
-            label_pred = [np.argmax(p) for p in predictions.detach().numpy()]
-            true_labels = true_labels + batch.labels.detach().tolist()
+            label_pred = [np.argmax(p) for p in predictions.cpu().detach().numpy()]
+            true_labels = true_labels + batch.labels.cpu().detach().tolist()
             model_predictions = model_predictions + label_pred
-            for p, tp in zip(label_pred, batch.labels.detach().tolist()):
+            for p, tp in zip(label_pred, batch.labels.cpu().detach().tolist()):
                 if p == tp:
                     total_correct += 1
 
             pbar.set_description(
-                f'Loss: {train_loss / (i + 1)}, Acc: {total_correct / (len(batch) * (i + 1))},' +
-                f'F1: {f1_score(true_labels, model_predictions, average="macro")}')
+                f'Loss: {train_loss / ((i + 1) * (epoch + 1)):.7f} ' +
+                f'Acc: {total_correct / ((len(batch) * (i + 1)) * (epoch + 1)):.7f} ' +
+                f'F1: {f1_score(true_labels, model_predictions, average="macro"):.7f} ' +
+                f'Total correct {total_correct} out of {len(model_predictions)}\n'
+            )
+            pbar.update(1)
 
             # Backward and optimize
             optimiser.zero_grad()
             loss.backward()
             # TODO learning scheduler https://pytorch.org/docs/0.3.0/optim.html#how-to-adjust-learning-rate or determing step size
             optimiser.step()
-            pbar.update(1)
+
 
 
 def eval(model, eval_iterator):
@@ -70,7 +74,7 @@ if __name__ == '__main__':
     charcnn_dataset = CharCnnDataset(path=config_data['dataset_file'], format='tsv',
                                      fields=[('labels', LABELS), ('text', CHARS)])
 
-    train_iterator = torchdata.Iterator(charcnn_dataset, batch_size=config_model['batch_size'], device=device)
+    train_iterator = torchdata.BucketIterator(charcnn_dataset, batch_size=config_model['batch_size'], device=device)
 
     num_classes, weights = charcnn_dataset.get_class_weight()
     if config_model['balanced_weights']:
@@ -81,8 +85,8 @@ if __name__ == '__main__':
 
     charCNNModel = CharCNNModel().to(device)
     criterion = nn.CrossEntropyLoss(weight=torch.as_tensor(weights, device=device).float())
-    optimiser = torch.optim.SGD(charCNNModel.parameters(), lr=config_model['train']['learning_rate'], momentum=0.9)
-    # optimiser = torch.optim.Adam(charCNNModel.parameters(), lr=config['learning_rate'])
+    # optimiser = torch.optim.SGD(charCNNModel.parameters(), lr=config_model['train']['learning_rate'], momentum=0.9)
+    optimiser = torch.optim.Adam(charCNNModel.parameters(), lr=config_model['train']['learning_rate'])
 
     train(charCNNModel, criterion, optimiser, train_iterator)
     eval(charCNNModel, [])

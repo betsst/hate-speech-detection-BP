@@ -63,11 +63,13 @@ class CharCNNModel(nn.Module):
         self.lin1 = nn.Sequential(
             nn.Linear(self.compute_dim(), self.output_units),
             # maybe relu?
+            nn.ReLU(),
             nn.Dropout(p=self.dropout_prob)
         )
         self.lin2 = nn.Sequential(
             nn.Linear(self.output_units, self.output_units),
             # maybe relu?
+            nn.ReLU(),
             nn.Dropout(p=self.dropout_prob)
         )
         self.lin3 = nn.Linear(self.output_units, config_model['num_classes'])
@@ -80,6 +82,7 @@ class CharCNNModel(nn.Module):
         # batch shape for model input x should be (batch_size, 70, 1014)
         # x = torch.randn(self.batch_size, len(config['data_processing']['alphabet']), self.l0) # for debug
         xt = x.transpose(1, 2)
+        # print('input shape  ' + str(x.shape) + ' after traspose ' + str(xt.shape))
 
         out = self.conv1(xt)
         # print('shape after CONV1 ' + str(out.shape))
@@ -94,7 +97,7 @@ class CharCNNModel(nn.Module):
         out = self.conv6(out)
         # print('shape after CONV6 ' + str(out.shape))
 
-        out = out.view(self.batch_size, out.shape[1] * out.shape[2])
+        out = out.view(out.shape[0], out.shape[1] * out.shape[2])
         # print('shape to dense ' + str(out.shape))
         out = self.lin1(out)
         out = self.lin2(out)

@@ -2,7 +2,10 @@ import json
 import torch
 import pandas as pd
 
+import torchtext
 from torchtext.data import Example, TabularDataset
+
+from characterCNN.CharField import CharField
 
 with open('config.json', 'r') as f:
     config = json.load(f)
@@ -20,18 +23,16 @@ class CharCnnDataset(TabularDataset):
         classes = set(self.labels)
         num_classes = len(classes)
 
+        if config['balanced_weights']:
+            return num_classes, [[1.0] * num_classes]
+
         classes_occurrences = [0] * num_classes
         for label in self.labels:
             classes_occurrences[label] += 1
-        class_weights = [n/dataset_size for n in classes_occurrences]
 
-        class_weights_modified = class_weights.copy()
-        max_count = max(class_weights_modified)
-        class_weights_modified[class_weights_modified.index(max(class_weights_modified))] = 1
-        class_weights_modified = [max_count/w for w in class_weights_modified]
+        max_count = max(classes_occurrences)
+        class_weights = [max_count / n for n in classes_occurrences]
 
-        print(f' : {[n/dataset_size for n in classes_occurrences]}')
-        print(f'w: {[dataset_size/n for n in classes_occurrences]}')
-        print(f'w mod: {class_weights_modified}')
-
-        return num_classes, class_weights_modified
+        print(f'Dataset size: {dataset_size} N. classes: {num_classes}' +
+              f'Count by classes: {classes_occurrences} Weights: {class_weights}')
+        return num_classes, class_weights
