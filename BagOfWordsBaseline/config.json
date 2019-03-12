@@ -1,0 +1,13 @@
+{
+  "dataset_file": "../data/davidson_labels_html.tsv",
+  "doc_freq_file": "../data/bow_tf.tsv",
+  "tfidf_vocab_size": 37083,
+  "num_classes": 3,
+  "batch_size": 10,
+  "dropout": 0.5,
+  "balanced_weights": false,
+  "feature_size": "small",
+  "num_epochs": 5,
+  "learning_rate": 0.001,
+  "save_model": true
+}
