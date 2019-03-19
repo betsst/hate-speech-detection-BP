@@ -1,5 +1,6 @@
 {
-  "num_epochs": 1,
+  "dataset": "../data/davidson_labels_html.tsv",
+  "num_epochs": 4,
   "batch_size": 16,
   "learning_rate": 0.001,
   "balanced_weights": false,
@@ -7,9 +8,12 @@
   "embeddings": "glove",
   "pad_masking": false,
 
+  "penalization_form": true,
+  "coefficient": 0.3,
+
   "hidden_units": 300,
   "extraction_count": 16,
   "d_a": 32,
 
-  "visualize_all_extractions": false
+  "visualize_all_extractions": true
 }

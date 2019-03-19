@@ -16,8 +16,6 @@ class SelfAttentionModel(nn.Module):
         self.embeddings = nn.Embedding(len(vocabulary), self.embeddings_dim)
         self.vocab.vectors[self.vocab.stoi['<pad>']] = -1e8 * self.embeddings_dim  # pad token masking
         self.embeddings.weight.data.copy_(vocabulary.vectors.to(device))
-        print(self.vocab.vectors)
-        print(self.embeddings.weight.data)
 
         self.u = u  # hidden unit for each unidirectional LSTM
         self.r = r  # number of different parts to be extracted from the sentence.

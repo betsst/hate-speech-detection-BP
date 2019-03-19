@@ -41,9 +41,9 @@ def ids2text(batch, vocab):
 
 
 # visualize all extractions attentions for one document
-def visualize_doc_all_extractions(doc_attention, doc_text):
+def visualize_doc_all_extractions(doc_attention, doc_text, ):
     fig, ax = plt.subplots()
-    im = ax.imshow([doc_attention.cpu().detach().numpy()])
+    im = ax.imshow(doc_attention.cpu().detach().numpy(), cmap='YlGn')
 
     ax.set_xticks(np.arange(len(doc_text)))
     ax.set_yticks(np.arange(doc_attention.shape[0]))
@@ -61,7 +61,7 @@ def visualize_doc_all_extractions(doc_attention, doc_text):
 def visualize_joined_att(attention, docs_text):
     # join extraction
     sum_att = torch.sum(attention, dim=1)  # sum over annotations
-    norm_att = F.softmax(sum_att, dim=1)   # normalize to sum up to one
+    norm_att = F.softmax(sum_att, dim=1)  # normalize to sum up to one
     for doc_att, doc_text in zip(norm_att, docs_text):
         fig, ax = plt.subplots()
         im = ax.imshow([doc_att.cpu().detach().numpy()])
@@ -87,7 +87,12 @@ def visualize(batch, attention, vocab):
         visualize_joined_att(attention, docs_text)
 
 
-def train(model, criterion, optimiser, train_iterator, vocab):
+def frobenius_norm(p):
+    pen_loss = torch.sum(p ** 2) ** 0.5  # sum(p^2)^0.5
+    return pen_loss
+
+
+def train(model, criterion, optimiser, train_iterator, vocab, device):
     model.train()
 
     train_loss = 0
@@ -103,6 +108,16 @@ def train(model, criterion, optimiser, train_iterator, vocab):
             # visualize(batch.text, attention, vocab)
 
             loss = criterion(predictions, batch.label)
+
+            # penalization term
+            if config['penalization_form']:
+                # A * A^T - identity matrix
+                pen = torch.bmm(attention, attention.transpose(2, 1))
+                pen -= torch.eye(config['extraction_count'], requires_grad=False, device=device)\
+                    .expand(config['batch_size'], config['extraction_count'], config['extraction_count'])
+                pen_loss = frobenius_norm(pen)  # frob_norm(penalization)
+                loss += pen_loss * config['coefficient']
+
             train_loss += loss.item()
 
             label_pred = [np.argmax(p) for p in predictions.cpu().detach().numpy()]
@@ -164,7 +179,7 @@ if __name__ == '__main__':
     TEXT = torchdata.Field(tokenize="spacy", sequential=True, lower=True, batch_first=True)
     LABEL = torchdata.Field(use_vocab=False, sequential=False, preprocessing=lambda x: int(x), is_target=True)
 
-    tabular_dataset = torchdata.TabularDataset('../data/davidson2.tsv', format='tsv',
+    tabular_dataset = torchdata.TabularDataset(config['dataset'], format='tsv',
                                                fields=[('label', LABEL), ('text', TEXT)])
     train_dataset, test_dataset = tabular_dataset.split()
 
@@ -189,7 +204,7 @@ if __name__ == '__main__':
     criterion = nn.CrossEntropyLoss(weight=torch.as_tensor(weights, device=device).float())
     optimiser = torch.optim.Adam(selfAttModel.parameters(), lr=config['learning_rate'])
 
-    train(selfAttModel, criterion, optimiser, train_iterator, TEXT.vocab)
+    train(selfAttModel, criterion, optimiser, train_iterator, TEXT.vocab, device)
     test(selfAttModel, test_iterator, TEXT.vocab)
 
     if config['save_model']:
