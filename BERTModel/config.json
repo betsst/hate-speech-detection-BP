@@ -1,0 +1,17 @@
+{
+  "dataset_path": "../data",
+  "dataset_train": "davidson_html_train.tsv",
+  "dataset_test": "davidson_html_test.tsv",
+
+  "num_epochs": 4,
+  "batch_size": 32,
+  "learning_rate": 0.00005,
+  "balanced_weights": false,
+  "save_model": true,
+  "lower_case": true,
+  "optimiser": "bert_adam",
+  "freeze_after": 2,
+
+  "load_model": false,
+  "checkpoint": "modelBert.ckpt"
+}
