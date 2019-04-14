@@ -11,9 +11,9 @@ with open('config.json', 'r') as f:
 
 
 class BOWField(torchdata.Field):
-    def __init__(self, term_freqs=None):
+    def __init__(self, device, term_freqs=None):
         super(BOWField, self).__init__(tokenize='spacy', lower=True)
-
+        self.device = device
         # TERM = torchdata.Field()
         # COUNT = torchdata.Field(use_vocab=False, sequential=False, preprocessing=lambda x: int(x), is_target=True)
         # self.df_dataset = TabularDataset(path=config['dataset_file'], format='tsv',
@@ -35,7 +35,7 @@ class BOWField(torchdata.Field):
                              "(data batch, batch lengths).")
         if isinstance(arr, tuple):
             arr, lengths = arr
-            lengths = torch.tensor(lengths, dtype=self.dtype, device=device)
+            lengths = torch.tensor(lengths, dtype=self.dtype, device=self.device)
 
         var = []
         for tokens in arr:
@@ -47,7 +47,7 @@ class BOWField(torchdata.Field):
                 bow[token] = count * log10(self.feature_count / self.df_counts[token])
             var.append(list(bow.values()))
 
-        var = torch.FloatTensor(var, device=device).float()
+        var = torch.FloatTensor(var).to(self.device).float()
 
         if self.sequential:
             var = var.contiguous()

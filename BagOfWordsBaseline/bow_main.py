@@ -1,6 +1,7 @@
 # Model based on bag-of-words approach with its TF-IDF values
 import csv
 import json
+import sys
 
 import numpy as np
 from sklearn.metrics import f1_score
@@ -11,10 +12,11 @@ from torchtext import data as torchdata
 from torchtext.data import TabularDataset
 from tqdm import tqdm
 
-from BagOfWordsBaseline.BOWField import BOWField
-from BagOfWordsBaseline.BOWModel import BOWModel
+from BOWField import BOWField
+from BOWModel import BOWModel
 from get_tf import get_tfs
-from utils.utils import count_parameters
+sys.path.append("..")
+from utils import utils
 
 
 def get_weights(labels):
@@ -46,6 +48,8 @@ def train(model, criterion, optimiser, train_iterator):
     for epoch in range(config['num_epochs']):
         pbar = tqdm(total=total_batches)
         train_loss = 0
+        epoch_predictions = 0
+        epoch_correct = 0
         for i, batch in enumerate(train_iterator):
             predictions = model(batch.text)  # forward pass
 
@@ -56,12 +60,15 @@ def train(model, criterion, optimiser, train_iterator):
             true_labels = true_labels + batch.label.cpu().detach().tolist()
             model_predictions = model_predictions + label_pred
             for p, tp in zip(label_pred, batch.label.cpu().detach().tolist()):
+                epoch_predictions += 1
                 if p == tp:
                     total_correct += 1
+                    epoch_correct += 1
 
             pbar.set_description(
-                f'Loss: {train_loss / ((i + 1) * (epoch + 1)):.7f} ' +
-                f'Acc: {total_correct / ((len(batch) * (i + 1)) * (epoch + 1)):.7f} ' +
+                f'{epoch + 1}/{config["num_epochs"]} ' +
+                f'Loss: {train_loss / (i + 1):.7f} ' +
+                f'Acc: {epoch_correct / epoch_predictions:.7f} ' +
                 f'F1: {f1_score(true_labels, model_predictions, average="macro"):.7f} ' +
                 f'Total correct {total_correct} out of {len(model_predictions)}\n'
             )
@@ -75,17 +82,30 @@ def train(model, criterion, optimiser, train_iterator):
 
 def test(model, test_iterator):
     model.eval()
-    # test_true = [np.argmax(t) for t in y_test]
-    # test_pred = []
-    # for x, label in zip(x_test, y_test):
-    #     input = torch.Tensor([x]).to(device)
-    #     out = model(input)
-    #     test_pred.append(np.argmax(outputs.cpu().detach().numpy()))
-    # print(f'Model has F1Score: {f1_score(test_true, test_pred, average="macro")}')
+    print('Testing model ...')
+
+    total_correct = 0
+    true_labels = []
+    model_predictions = []
+    for i, batch in enumerate(test_iterator):
+        predictions = model(batch.text)  # forward pass
+
+        label_pred = [np.argmax(p) for p in predictions.cpu().detach().numpy()]
+        true_labels = true_labels + batch.label.cpu().detach().tolist()
+        model_predictions = model_predictions + label_pred
+        for p, tp in zip(label_pred, batch.label.cpu().detach().tolist()):
+            if p == tp:
+                total_correct += 1
+
+    print(
+        f'\n\n\nAcc: {total_correct / len(model_predictions):.7f} ' +
+        f'F1: {f1_score(true_labels, model_predictions, average="macro"):.7f} ' +
+        f'Total correct {total_correct} out of {len(model_predictions)}\n'
+    )
 
 
 def save_model(model):
-    torch.save(model.state_dict(), 'modelBOW.ckpt')
+    torch.save(model.state_dict(),)
 
 
 if __name__ == '__main__':
@@ -98,7 +118,7 @@ if __name__ == '__main__':
 
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
-    TEXT = BOWField(term_freqs=tfs)
+    TEXT = BOWField(device, term_freqs=tfs)
     LABEL = torchdata.Field(use_vocab=False, sequential=False, preprocessing=lambda x: int(x), is_target=True)
 
     train_dataset, test_dataset = torchdata.TabularDataset.splits(path=config['dataset_path'],
@@ -116,7 +136,7 @@ if __name__ == '__main__':
     feature_size = TEXT.get_features_count()
 
     BOWModel = BOWModel(input_size=feature_size, num_classes=num_classes, dropout=config['dropout']).to(device)
-    print(f'Model has {count_parameters(BOWModel)} trainable parameters')
+    print(f'Model has {utils.count_parameters(BOWModel)} trainable parameters')
 
     criterion = nn.CrossEntropyLoss(weight=torch.as_tensor(weights, device=device).float())
     optimiser = torch.optim.Adam(BOWModel.parameters(), lr=config['learning_rate'], weight_decay=config['weight_decay'])
@@ -125,4 +145,4 @@ if __name__ == '__main__':
     test(BOWModel, test_iterator)
 
     if config['save_model']:
-        save_model(BOWModel)
+        utils.save_model( 'modelBOW.ckpt', BOWModel)

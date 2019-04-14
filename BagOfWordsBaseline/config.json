@@ -4,18 +4,15 @@
   "dataset_test": "davidson_html_test.tsv",
 
   "doc_freq_file": "../data/bow_tf.tsv",
-  "get_tfs" : true,
-  "save_tfs" : false,
-
-  "bow_type": "tfidf",
-
-  "batch_size": 20,
-  "dropout": 0.0,
-  "balanced_weights": false,
+  "get_tfs": true,
+  "save_tfs": false,
 
   "num_epochs": 5,
+  "batch_size": 16,
+  "balanced_weights": false,
   "learning_rate": 0.001,
   "weight_decay": 0.0,
+  "dropout": 0.0,
 
   "save_model": true
 }
