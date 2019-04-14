@@ -1,13 +1,21 @@
 {
-  "dataset_file": "../data/davidson_labels_html.tsv",
+  "dataset_path": "../data",
+  "dataset_train": "davidson_html_train.tsv",
+  "dataset_test": "davidson_html_test.tsv",
+
   "doc_freq_file": "../data/bow_tf.tsv",
-  "tfidf_vocab_size": 37083,
-  "num_classes": 3,
-  "batch_size": 10,
-  "dropout": 0.5,
+  "get_tfs" : true,
+  "save_tfs" : false,
+
+  "bow_type": "tfidf",
+
+  "batch_size": 20,
+  "dropout": 0.0,
   "balanced_weights": false,
-  "feature_size": "small",
+
   "num_epochs": 5,
   "learning_rate": 0.001,
+  "weight_decay": 0.0,
+
   "save_model": true
 }

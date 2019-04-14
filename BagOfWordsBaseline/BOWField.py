@@ -11,20 +11,22 @@ with open('config.json', 'r') as f:
 
 
 class BOWField(torchdata.Field):
-    def __init__(self):
+    def __init__(self, term_freqs=None):
         super(BOWField, self).__init__(tokenize='spacy', lower=True)
-        self.df_counts = {}
+
         # TERM = torchdata.Field()
         # COUNT = torchdata.Field(use_vocab=False, sequential=False, preprocessing=lambda x: int(x), is_target=True)
-        #
         # self.df_dataset = TabularDataset(path=config['dataset_file'], format='tsv',
         #                                  fields=[('count', COUNT), ('term', TERM)])
-
-        with open(config['doc_freq_file'], 'r', encoding='utf-8') as f:
-            reader = csv.reader(f, delimiter='\t')
-            for row in reader:
-                self.df_counts[row[0]] = int(row[1])
-        self.dataset_size = len(self.df_counts.keys())
+        if term_freqs is None:
+            self.df_counts = {}
+            with open(config['doc_freq_file'], 'r', encoding='utf-8') as f:
+                reader = csv.reader(f, delimiter='\t')
+                for row in reader:
+                    self.df_counts[row[0]] = int(row[1])
+        else:
+            self.df_counts = term_freqs
+        self.feature_count = len(self.df_counts)
 
     def numericalize(self, arr, device=None):
         if self.include_lengths and not isinstance(arr, tuple):
@@ -42,7 +44,7 @@ class BOWField(torchdata.Field):
             for token, count in tokens_count.items():
                 if token not in self.df_counts.keys():
                     continue
-                bow[token] = count * log10(self.dataset_size / self.df_counts[token])
+                bow[token] = count * log10(self.feature_count / self.df_counts[token])
             var.append(list(bow.values()))
 
         var = torch.FloatTensor(var, device=device).float()
@@ -53,3 +55,6 @@ class BOWField(torchdata.Field):
         if self.include_lengths:
             return var, lengths
         return var
+
+    def get_features_count(self):
+        return self.feature_count

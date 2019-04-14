@@ -13,6 +13,8 @@ from tqdm import tqdm
 
 from BagOfWordsBaseline.BOWField import BOWField
 from BagOfWordsBaseline.BOWModel import BOWModel
+from get_tf import get_tfs
+from utils.utils import count_parameters
 
 
 def get_weights(labels):
@@ -30,8 +32,6 @@ def get_weights(labels):
     max_count = max(classes_occurrences)
     class_weights = [max_count / n for n in classes_occurrences]
 
-    print(f'Dataset size: {dataset_size} N. classes: {num_classes} ' +
-          f'Count by classes: {classes_occurrences} Weights: {class_weights}')
     return num_classes, class_weights
 
 
@@ -73,8 +73,15 @@ def train(model, criterion, optimiser, train_iterator):
             optimiser.step()
 
 
-def eval(model, eval_iterator):
+def test(model, test_iterator):
     model.eval()
+    # test_true = [np.argmax(t) for t in y_test]
+    # test_pred = []
+    # for x, label in zip(x_test, y_test):
+    #     input = torch.Tensor([x]).to(device)
+    #     out = model(input)
+    #     test_pred.append(np.argmax(outputs.cpu().detach().numpy()))
+    # print(f'Model has F1Score: {f1_score(test_true, test_pred, average="macro")}')
 
 
 def save_model(model):
@@ -85,33 +92,37 @@ if __name__ == '__main__':
     with open('config.json', 'r') as f:
         config = json.load(f)
 
+    tfs = None
+    if config['get_tfs']:
+        tfs = get_tfs(config['save_tfs'], config['doc_freq_file'])
+
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
-    TEXT = BOWField()
+    TEXT = BOWField(term_freqs=tfs)
     LABEL = torchdata.Field(use_vocab=False, sequential=False, preprocessing=lambda x: int(x), is_target=True)
 
-    tabular_dataset = TabularDataset(path=config['dataset_file'], format='tsv',
-                                     fields=[('label', LABEL), ('text', TEXT)])
+    train_dataset, test_dataset = torchdata.TabularDataset.splits(path=config['dataset_path'],
+                                                                  train=config['dataset_train'],
+                                                                  test=config['dataset_test'],
+                                                                  format='tsv',
+                                                                  fields=[('label', LABEL), ('text', TEXT)])
+    train_iterator = torchdata.BucketIterator(train_dataset, batch_size=config['batch_size'], device=device)
+    test_iterator = torchdata.BucketIterator(test_dataset, batch_size=config['batch_size'], device=device)
 
-    train_iterator = torchdata.BucketIterator(tabular_dataset, batch_size=config['batch_size'], device=device)
+    TEXT.build_vocab(train_dataset)
+    LABEL.build_vocab(train_dataset)
 
-    TEXT.build_vocab(tabular_dataset)
-    LABEL.build_vocab(tabular_dataset)
-    num_classes, weights = get_weights([e.label for e in tabular_dataset.examples])
+    num_classes, weights = get_weights([e.label for e in train_dataset.examples])
+    feature_size = TEXT.get_features_count()
 
-    feature_size = -1
-    with open(config['doc_freq_file'], 'r', encoding='utf-8') as f:
-        reader = csv.reader(f, delimiter='\t')
-        for row in reader:
-            feature_size += 1
-    print(feature_size)
+    BOWModel = BOWModel(input_size=feature_size, num_classes=num_classes, dropout=config['dropout']).to(device)
+    print(f'Model has {count_parameters(BOWModel)} trainable parameters')
 
-    BOWModel = BOWModel(input_size=feature_size, num_classes=num_classes).to(device)
     criterion = nn.CrossEntropyLoss(weight=torch.as_tensor(weights, device=device).float())
-    optimiser = torch.optim.Adam(BOWModel.parameters(), lr=config['learning_rate'])
+    optimiser = torch.optim.Adam(BOWModel.parameters(), lr=config['learning_rate'], weight_decay=config['weight_decay'])
 
     train(BOWModel, criterion, optimiser, train_iterator)
-    eval(BOWModel, [])
+    test(BOWModel, test_iterator)
 
     if config['save_model']:
         save_model(BOWModel)
