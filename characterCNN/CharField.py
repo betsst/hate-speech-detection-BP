@@ -6,9 +6,6 @@ from torchtext.data import get_tokenizer
 
 with open('config.json', 'r') as f:
     config = json.load(f)
-    config_data = config['data_processing']
-    config_model = config['model']
-    config_train = config['model']['train']
 
 
 class CharField(torchdata.Field):
@@ -16,6 +13,8 @@ class CharField(torchdata.Field):
         self.fix_length = fix_length
         self.lower = lower
         self.tokenize = get_tokenizer(tokenize)
+        self.alphabet = config['alphabet']
+        # self.alphabet.append("'")
         super(CharField, self).__init__(fix_length=self.fix_length, lower=self.lower, tokenize=self.tokenize)
 
     def numericalize(self, arr, device=None):
@@ -31,10 +30,11 @@ class CharField(torchdata.Field):
         for elem in arr:  # process all in batch
             elem_matix = []
             for char in elem:
-                v = [0] * len(config_data['alphabet'])
-                if char in config_data['alphabet']:
-                    v[config_data['alphabet'].index(char)] = 1
-                elem_matix.append(v)
+                v = [0] * len(self.alphabet)
+                if char in self.alphabet:
+                    v[self.alphabet.index(char)] = 1
+                # elem_matix.insert(0, v)  # backward order
+                elem_matix.append(v)  # in-order
             var.append(elem_matix)
 
         var = torch.tensor(var, dtype=self.dtype, device=device).float()

@@ -1,0 +1,35 @@
+{
+  "dataset_path": "../data",
+  "dataset_train": "traindataset",
+  "dataset_test": "testdataset",
+  "dataset_valid": "datasetvalid",
+
+  "num_epochs": 20,
+  "batch_size": 32,
+  "learning_rate": 0.0003,
+  "balanced_weights": false,
+  "save_model": true,
+
+  "dropout": 0.0,
+  "weight_decay": 0.0,
+
+  "load_checkpoint": false,
+  "checkpoint": "model.ckpt",
+
+  "features": [
+    "is_retweeted",
+    "count_hashtags",
+    "count_mentions",
+    "count_urls",
+    "count_uppercase",
+    "count_words",
+    "flesch_reading_ease",
+    "flesch_kincaid_grade_level",
+    "word_ngrams",
+    "pos_ngrams"
+  ],
+  "ngrams_range": {
+    "pos": [1, 3],
+    "word": [1, 2]
+  }
+}

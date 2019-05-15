@@ -1,7 +1,8 @@
 {
   "dataset_path": "../data",
-  "dataset_train": "davidson_html_train.tsv",
-  "dataset_test": "davidson_html_test.tsv",
+  "dataset_train": "datasettrain",
+  "dataset_test": "datasettest",
+  "dataset_valid": "datasetvalid",
 
   "num_epochs": 20,
   "batch_size": 32,
@@ -12,7 +13,7 @@
   "pad_masking": true,
 
   "penalization_form": true,
-  "coefficient": 0.7,
+  "coefficient": 0.0,
 
   "hidden_units": 300,
   "extraction_count": 30,
@@ -20,11 +21,11 @@
   "hidden_classifier_units": 3000,
   "classifier_dropout": 0.3,
 
-  "visualization": false,
-  "visualize_all_extractions": false,
-  "visualize_joined_extractions": false,
+  "visualization": true,
+  "visualize_all_extractions": true,
+  "visualize_joined_extractions": true,
 
   "load_checkpoint": true,
   "continue_checkpoint": true,
-  "checkpoint": "modelSelfAtt.ckpt"
+  "checkpoint": "D.ckpt"
 }

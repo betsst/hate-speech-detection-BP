@@ -6,6 +6,7 @@ def count_parameters(model):
     return sum(p.numel() for p in model.parameters() if p.requires_grad)
 
 
+# count weights for error function by classes
 def get_weights(labels, config):
     dataset_size = len(labels)
     classes = set(labels)
@@ -24,6 +25,7 @@ def get_weights(labels, config):
     return num_classes, class_weights
 
 
+# ids to string based on vocab
 def ids2str(ids, vocab):
     batch_text = []
     for doc in ids:
@@ -32,5 +34,6 @@ def ids2str(ids, vocab):
     return batch_text
 
 
+# save checkpoint
 def save_model(model_path, model):
     torch.save(model.state_dict(), model_path)

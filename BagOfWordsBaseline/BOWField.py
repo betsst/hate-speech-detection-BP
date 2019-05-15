@@ -11,7 +11,7 @@ with open('config.json', 'r') as f:
 
 
 class BOWField(torchdata.Field):
-    def __init__(self, device, term_freqs=None):
+    def __init__(self, device, cut_most_freq_tokens, term_freqs=None):
         super(BOWField, self).__init__(tokenize='spacy', lower=True)
         self.device = device
         # TERM = torchdata.Field()
@@ -26,7 +26,14 @@ class BOWField(torchdata.Field):
                     self.df_counts[row[0]] = int(row[1])
         else:
             self.df_counts = term_freqs
+        if cut_most_freq_tokens['cut']:
+            self.cut_most_freq(cut_most_freq_tokens['count'])
+
         self.feature_count = len(self.df_counts)
+
+    def cut_most_freq(self, count):
+        sorted_feq = sorted(self.df_counts.items(), key=lambda kv: kv[1], reverse=True)
+        self.df_counts = dict(sorted_feq[:count])
 
     def numericalize(self, arr, device=None):
         if self.include_lengths and not isinstance(arr, tuple):

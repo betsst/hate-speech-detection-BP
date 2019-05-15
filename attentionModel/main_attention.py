@@ -261,9 +261,9 @@ if __name__ == '__main__':
     optimiser = torch.optim.Adam(selfAttModel.parameters(), lr=config['learning_rate'], weight_decay=0.0001)
     criterion = nn.CrossEntropyLoss(weight=torch.as_tensor(weights, device=device).float())
 
-    # train(selfAttModel, criterion, optimiser, train_iterator, TEXT.vocab, device)
+    train(selfAttModel, criterion, optimiser, train_iterator, TEXT.vocab, device)
 
-    # if config['save_model']:
-    #     utils.save_model('modelSelfAtt.ckpt', selfAttModel)
+    if config['save_model']:
+        utils.save_model('modelSelfAtt.ckpt', selfAttModel)
 
     test(selfAttModel, test_iterator, TEXT.vocab)

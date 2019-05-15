@@ -215,7 +215,7 @@ def other_features():
     tfidf_ngrams = tfidf.fit_transform(processed_tweets)
 
     # pos n-grams
-    pos_tfidf = TfidfVectorizer(ngram_range=word_ngrams)
+    pos_tfidf = TfidfVectorizer(ngram_range=pos_ngrams)
     pos_ngrams = pos_tfidf.fit_transform(pos_tweets)
 
     if save_features:

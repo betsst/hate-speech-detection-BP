@@ -5,9 +5,9 @@ import numpy as np
 from tqdm import tqdm
 from sklearn.metrics import f1_score
 
-from baselineModel import BaselineModel
-from davidson_data import classes_summary, get_y_values
-
+from refactoring.baselineModel import BaselineModel
+from refactoring.davidson_data import classes_summary, get_y_values
+from utils.utils import count_parameters
 
 random_seed = 42
 reduce = {'do_reducing': True, 'reduce_to': 10}   # for debugging
@@ -44,6 +44,7 @@ x_train, x_test, y_train, y_test = train_test_split(x_vals, y_vals, test_size=te
 features_count = len(x_train[0])
 
 log_reg_model = BaselineModel(features_count, classes).to(device)
+print(f'Model has {count_parameters(log_reg_model)} trainable paramete')
 criterion = nn.CrossEntropyLoss(weight=class_weights)
 # optimiser = torch.optim.SGD(linear_reg_model.parameters(), lr = learning_rate)
 optimiser = torch.optim.Adam(log_reg_model.parameters(), lr=learning_rate)

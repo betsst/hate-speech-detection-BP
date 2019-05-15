@@ -1,11 +1,17 @@
 {
   "dataset_path": "../data",
-  "dataset_train": "davidson_html_train.tsv",
-  "dataset_test": "davidson_html_test.tsv",
+  "dataset_train": "datasettrain",
+  "dataset_test": "datasettest",
+  "dataset_valid": "datasetvalid",
 
   "doc_freq_file": "../data/bow_tf.tsv",
   "get_tfs": true,
   "save_tfs": false,
+  "cut_most_freq": {
+    "cut": false,
+    "count": 1000
+  },
+
 
   "num_epochs": 5,
   "batch_size": 16,
@@ -14,5 +20,7 @@
   "weight_decay": 0.0,
   "dropout": 0.0,
 
+  "load_checkpoint": true,
+  "checkpoint": "modelBOW.ckpt",
   "save_model": true
 }

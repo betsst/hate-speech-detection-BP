@@ -150,7 +150,7 @@ if __name__ == '__main__':
     criterion = nn.CrossEntropyLoss(weight=torch.as_tensor(weights, device=device).float())
     optimiser = torch.optim.Adam(BOWModel.parameters(), lr=config['learning_rate'], weight_decay=config['weight_decay'])
 
-    # train(BOWModel, criterion, optimiser, train_iterator)
+    train(BOWModel, criterion, optimiser, train_iterator)
     test(BOWModel, test_iterator)
 
     if config['save_model']:

@@ -60,7 +60,6 @@ class SelfAttentionModel(nn.Module):
         self.relu = torch.nn.ReLU()
         # softmax is included in CrossEntropyLoss
 
-    # TODO weight init
 
     def self_attention(self, H):
         out_ws1 = self.Ws1(H)               # Ws1^T * H
@@ -74,6 +73,7 @@ class SelfAttentionModel(nn.Module):
             embedding_output = self.bert.embeddings(w)
         elif self.embeddings == 'elmo':
             character_ids = batch_to_ids(ids2str(w, self.vocab))
+            # embeddings = self.elmo_embedder.batch_to_embeddings()
             embeddings = self.elmo(character_ids.to(device=self.device))
             embedding_output = embeddings['elmo_representations'][0].to(self.device)
         else:
